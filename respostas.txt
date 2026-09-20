@@ -1,0 +1,73 @@
+Pergunta 1: o colega cético
+
+Ele não está exatamente errado hoje, mas está errado como prática. Com um único projeto e trabalhando sozinho, instalar tudo no Python global costuma funcionar. O problema é que isso funciona por sorte, e não por desenho:
+
+Não há registro do que o projeto precisa. O Python global vira um acúmulo de pacotes de tudo o que ele já instalou. Se o código depende de uma biblioteca que ele esqueceu que tinha instalado, ninguém percebe até o projeto rodar em outra máquina.
+Ele fica refém do próprio computador. Se formatar a máquina ou atualizar o Python, não sabe reconstruir o ambiente.
+
+Com dois projetos, o risco aparece. O projeto A pode precisar do pandas 1.5 e o B do pandas 2.2, mas o Python global só comporta uma versão de cada pacote. Atualizar para um projeto pode quebrar o outro. Com um ambiente virtual por projeto, cada um tem suas próprias versões, isoladas.
+
+Com um colega de equipe, surge o clássico "na minha máquina funciona". Sem ambiente isolado, não existe uma lista limpa das dependências do projeto: o pip freeze do Python global despeja tudo o que existe na máquina, inclusive coisas sem relação. O colega não consegue reproduzir o ambiente, e ninguém sabe qual versão gerou qual resultado.
+
+Além disso, sistemas como Linux e macOS modernos já bloqueiam ou desencorajam pip install no Python do sistema, justamente para evitar quebrar ferramentas internas.
+
+O custo do ambiente virtual é de dois ou três comandos, e o benefício é um seguro contra problemas que só aparecem tarde.
+
+Pergunta 2: ignorar não é proteger
+
+Não, o Git não consegue recuperar o data/vendas.csv. O README.md foi commitado, então seu conteúdo está guardado no histórico, e um git restore README.md ou git checkout o traz de volta. Já um arquivo listado no .gitignore nunca entra no repositório: o Git não o rastreia, não guarda cópias e não sabe que ele existiu. Se ele for apagado, some do disco e não existe cópia dentro do Git.
+
+O que isso ensina:
+
+Ignorar significa "Git, finja que esse arquivo não existe". Ele fica fora da história e sem nenhuma proteção do Git.
+Versionar significa "Git, guarde cada versão deste arquivo". Só o que foi versionado pode ser recuperado.
+
+O .gitignore é uma decisão sobre o que não pertence ao repositório, e não uma forma de proteção. Dados costumam ficar de fora porque são grandes, mudam pouco ou são sensíveis, mas continuam precisando de proteção por outros meios.
+
+Estratégia correta para proteger o arquivo:
+
+Fazer backup fora do Git: nuvem, HD externo ou um bucket de armazenamento. Como seu projeto está no OneDrive, a lixeira e o histórico de versões dele podem ajudar, mas não devem ser a única defesa.
+Tratar os dados brutos como imutáveis e documentar sua origem no README.md (link, data de download, como obter).
+Guardar no Git o código que gera os dados derivados, para que o que for processado possa ser refeito a partir dos brutos.
+Se o dado precisa de histórico de versões, usar uma ferramenta feita para isso, como DVC ou Git LFS, que versionam dados grandes sem inchar o repositório.
+Se o arquivo for pequeno e não sensível, a opção mais simples é tirar data/ do .gitignore e commitá-lo normalmente.
+Pergunta 3: o teste definitivo da aula
+
+Passo a passo para a colega:
+
+Instalar as ferramentas: Git e uv (o uv baixa o Python sozinho, se necessário).
+Clonar o repositório e entrar na pasta:
+bash
+   git clone <url-do-repositorio>
+   cd projeto-vendas
+Criar um ambiente virtual novo:
+bash
+   uv venv
+Ativar o ambiente:
+powershell
+   .venv\Scripts\Activate.ps1      # Windows
+   source .venv/bin/activate       # Linux/macOS
+Instalar as bibliotecas a partir do requirements.txt:
+bash
+   uv pip install -r requirements.txt
+Conferir as versões instaladas com uv pip list e comparar com o arquivo.
+Obter os dados por fora, já que data/ está no .gitignore. Ela precisa receber o vendas.csv por outro canal (o README.md deve dizer onde) e colocá-lo na pasta data/.
+Rodar o projeto, abrindo os notebooks com o kernel do .venv.
+
+Para as versões serem exatamente as mesmas, o requirements.txt precisa ter versões fixadas (pandas==2.2.3, e não apenas pandas). Quem monta o projeto gera esse arquivo com:
+
+bash
+uv pip freeze > requirements.txt
+
+Também vale registrar a versão do Python usada, no README.md ou em um arquivo .python-version.
+
+Por que o .venv não viajar junto não é um defeito:
+
+O .venv é um produto, não a fonte. Ele pode ser reconstruído a qualquer momento a partir da receita, que é o requirements.txt. O que se compartilha é a receita, e não o bolo pronto. Isso é o desenho da reprodutibilidade, por quatro razões:
+
+Ele não é portátil. Contém caminhos absolutos da sua máquina e binários compilados para o seu sistema operacional. Um .venv do Windows não funciona no macOS ou no Linux.
+É pesado e ruidoso. São centenas de megabytes e milhares de arquivos que poluiriam o repositório e o histórico.
+Reconstruir força a explicitar as dependências. Se o ambiente viajasse pronto, dependências não declaradas passariam despercebidas. Ao recriá-lo do zero a partir do requirements.txt, qualquer dependência esquecida aparece na hora, e o teste da colega é justamente esse.
+Reprodutibilidade é sobre o processo, não sobre a cópia. Um ambiente copiado só prova que funciona naquele computador. Um ambiente que qualquer pessoa consegue reconstruir prova que o projeto funciona em qualquer lugar.
+
+A lógica é a mesma da pergunta 2: o que pode ser regenerado (.venv) fica fora do Git e é reconstruído por uma receita versionada, e o que não pode ser regenerado (os dados originais) precisa de uma estratégia de proteção própria.

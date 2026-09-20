@@ -1,0 +1,12 @@
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+$env:Path = "C:\Users\luizg\.local\bin;$env:Path"
+
+uv --version
+
+uv venv
+
+cd "C:\Users\luizg\OneDrive\Área de Trabalho\aulas-ciencias-dados"
+".venv/", "__pycache__/", "data/", "*.env", ".ipynb_checkpoints/" | Set-Content -Path .gitignore -Encoding ascii
+
+commita o gitignore
